@@ -6,6 +6,7 @@ import { ArrowRight, Zap, Trophy, Users, Sparkles, Leaf, Recycle, Award, Trendin
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import Lenis from '@studio-freight/lenis';
+import logo from "@/assets/green11-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -63,6 +64,14 @@ const Index = () => {
         <RetroGrid className="opacity-40" />
         
         <div className="relative z-10 mx-auto max-w-5xl text-center">
+          <div className="mb-8 flex justify-center">
+            <img 
+              src={logo} 
+              alt="SustainaLeague Logo" 
+              className="h-32 w-auto animate-in fade-in-0 zoom-in-95 duration-700"
+            />
+          </div>
+          
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 backdrop-blur-sm">
             <Leaf className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">Sustainability Gamified</span>
