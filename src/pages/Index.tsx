@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { RetroGrid } from "@/components/ui/retro-grid";
 import { ZoomParallax } from "@/components/ui/zoom-parallax";
-import { ArrowRight, Zap, Trophy, Users, Sparkles, Leaf, Recycle, Award, TrendingUp } from "lucide-react";
+import DisplayCards from "@/components/ui/display-cards";
+import { ArrowRight, Zap, Trophy, Users, Sparkles, Leaf, Recycle, Award, TrendingUp, Target, Gift, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import Lenis from '@studio-freight/lenis';
@@ -90,6 +91,57 @@ const Index = () => {
 
       {/* Zoom Parallax Section */}
       <ZoomParallax images={sustainabilityImages} />
+
+      {/* Features Showcase Section */}
+      <section className="px-4 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+              Your Sustainability Journey
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Discover how easy it is to make an impact
+            </p>
+          </div>
+          
+          <div className="flex min-h-[400px] w-full items-center justify-center">
+            <DisplayCards
+              cards={[
+                {
+                  icon: <Target className="size-4 text-emerald-300" />,
+                  title: "Daily Challenges",
+                  description: "Complete eco-tasks & earn GP",
+                  date: "Updated daily",
+                  iconClassName: "text-emerald-500",
+                  titleClassName: "text-emerald-500",
+                  className:
+                    "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+                },
+                {
+                  icon: <Trophy className="size-4 text-amber-300" />,
+                  title: "Leaderboard",
+                  description: "Compete with your hostel",
+                  date: "Live rankings",
+                  iconClassName: "text-amber-500",
+                  titleClassName: "text-amber-500",
+                  className:
+                    "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+                },
+                {
+                  icon: <Gift className="size-4 text-purple-300" />,
+                  title: "Rewards Store",
+                  description: "Redeem exclusive prizes",
+                  date: "New items weekly",
+                  iconClassName: "text-purple-500",
+                  titleClassName: "text-purple-500",
+                  className:
+                    "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10",
+                },
+              ]}
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Platform Benefits Section */}
       <section className="bg-muted/30 px-4 py-24">
