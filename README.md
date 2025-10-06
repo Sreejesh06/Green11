@@ -36,6 +36,21 @@ npm i
 npm run dev
 ```
 
+### Environment variables
+
+Create a local `.env` from the provided example and add your Supabase project values:
+
+```sh
+cp .env.example .env
+# then edit .env and set:
+# VITE_SUPABASE_URL=your-project-url
+# VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+Notes:
+- Do not put service role keys in `.env` for this browser app. Service role keys are server-only.
+- `.env` files are ignored by git by default in this repo.
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).

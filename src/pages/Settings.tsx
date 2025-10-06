@@ -4,13 +4,111 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Bell, Shield, Palette, Globe } from "lucide-react";
+import { User, Mail, Bell, Shield, Palette } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { getMyProfile, updateMyProfile, uploadAvatar } from "@/lib/api/profiles";
+import supabase from "@/lib/supabaseClient";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/api/queryKeys";
 
 export default function Settings() {
-  const handleSave = (section: string) => {
-    toast.success(`${section} settings saved! ✅`);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+
+  const queryClient = useQueryClient();
+  const { data: profileData, isLoading: loadingProfile } = useQuery({
+    queryKey: queryKeys.profile,
+    queryFn: getMyProfile,
+  });
+  useEffect(() => {
+    if (profileData) {
+      setUsername(profileData.username ?? "");
+      const parts = (profileData.full_name ?? "").split(" ");
+      setFirstName(parts[0] ?? "");
+      setLastName(parts.slice(1).join(" ") ?? "");
+    }
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+    setLoading(false);
+  }, [profileData]);
+
+  const saveProfileMutation = useMutation({
+    mutationFn: async () =>
+      updateMyProfile({
+        username: username || null,
+        full_name: [firstName, lastName].filter(Boolean).join(" ") || null,
+      }),
+    onMutate: async () => {
+      const prev = queryClient.getQueryData<any>(queryKeys.profile);
+      queryClient.setQueryData(queryKeys.profile, (old: any) => ({
+        ...(old || {}),
+        username,
+        full_name: [firstName, lastName].filter(Boolean).join(" ") || null,
+      }));
+      setSaving(true);
+      return { prev };
+    },
+    onError: (err, _, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(queryKeys.profile, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Failed to save settings");
+    },
+    onSuccess: () => {
+      toast.success("Profile saved! ✅");
+    },
+    onSettled: () => {
+      setSaving(false);
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+  });
+
+  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // optimistic preview by setting profile cache
+    const objectUrl = URL.createObjectURL(file);
+    const prev = queryClient.getQueryData<any>(queryKeys.profile);
+    queryClient.setQueryData(queryKeys.profile, (old: any) => ({ ...(old || {}), avatar_url: objectUrl }));
+    try {
+      const url = await uploadAvatar(file);
+      await updateMyProfile({ avatar_url: url });
+      toast.success("Avatar updated");
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    } catch (e) {
+      if (prev) queryClient.setQueryData(queryKeys.profile, prev);
+      toast.error(e instanceof Error ? e.message : "Failed to update avatar");
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update password"),
+    onSuccess: () => toast.success("Password updated"),
+  });
+
+  const onChangePassword = async () => {
+    const current = (document.getElementById("currentPassword") as HTMLInputElement)?.value;
+    const next = (document.getElementById("newPassword") as HTMLInputElement)?.value;
+    const confirm = (document.getElementById("confirmPassword") as HTMLInputElement)?.value;
+    if (!next || next !== confirm) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    setSaving(true);
+    await changePasswordMutation.mutateAsync(next).finally(() => setSaving(false));
+  };
+
+  function handleSave(section: string) {
+    toast.success(`${section} preferences saved`);
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -37,24 +135,30 @@ export default function Settings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="Arjun" className="glass-input" />
+              <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="glass-input" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Patel" className="glass-input" />
+              <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="glass-input" />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="arjun@example.com" className="glass-input" />
+            <Input id="email" type="email" value={email} disabled className="glass-input" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
-            <Input id="username" defaultValue="@arjun_green" className="glass-input" />
+            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="glass-input" />
           </div>
-          <Button onClick={() => handleSave("Profile")} className="bg-primary hover:bg-primary/90">
-            Save Changes
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => saveProfileMutation.mutate()} disabled={saving || loadingProfile} className="bg-primary hover:bg-primary/90">
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+            <label>
+              <input type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
+              <Button type="button" variant="outline">Update Avatar</Button>
+            </label>
+          </div>
         </CardContent>
       </Card>
 
@@ -184,9 +288,7 @@ export default function Settings() {
             <Input id="newPassword" type="password" placeholder="New password" className="glass-input" />
             <Input id="confirmPassword" type="password" placeholder="Confirm new password" className="glass-input" />
           </div>
-          <Button onClick={() => handleSave("Security")} variant="destructive">
-            Update Password
-          </Button>
+          <Button onClick={onChangePassword} variant="destructive" disabled={saving}>{saving ? "Updating..." : "Update Password"}</Button>
         </CardContent>
       </Card>
 

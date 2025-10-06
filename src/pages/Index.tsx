@@ -91,7 +91,7 @@ const Index = () => {
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => navigate('/dashboard')}>
               Join the League <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button size="lg" variant="outline" onClick={() => navigate('/auth')}>
               Watch Demo
             </Button>
           </div>
@@ -282,7 +282,7 @@ const Index = () => {
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => navigate('/dashboard')}>
               Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button size="lg" variant="outline" onClick={() => navigate('/auth')}>
               View Demo
             </Button>
           </div>
