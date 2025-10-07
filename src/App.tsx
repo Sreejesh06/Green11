@@ -29,6 +29,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          {/* Public callback route so Supabase can parse URL on OAuth/password flows */}
+          <Route path="/auth/callback" element={<Auth />} />
           <Route
             path="/*"
             element={<ProtectedLayout />}
