@@ -5,9 +5,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // eslint-disable-next-line no-console
-  console.warn(
+  console.error(
     "Missing Supabase env vars. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment."
   );
+  throw new Error("Missing required environment variables for Supabase");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -15,6 +16,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    flowType: 'pkce',
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'green11-app',
+    },
   },
 });
 

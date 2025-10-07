@@ -56,12 +56,24 @@ export default function Auth() {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: window.location.origin + "/auth",
+        redirectTo: `${window.location.origin}/auth`,
       });
-      if (error) throw error;
-      toast.success("Password reset email sent");
+      if (error) {
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          toast.error("Too many requests. Please wait a moment before trying again.");
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success("Password reset email sent");
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send reset email");
+      const errorMessage = e instanceof Error ? e.message : "Failed to send reset email";
+      if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+        toast.error("Too many requests. Please wait a moment before trying again.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
