@@ -25,13 +25,34 @@ export default function Auth() {
 
   const onLogin = async (e: any) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!loginEmail || !loginPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    
+    if (!loginEmail.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    
     try {
       setLoading(true);
       await signInWithEmail(loginEmail, loginPassword);
       toast.success("Welcome back!");
       navigate("/dashboard", { replace: true });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Login failed");
+      const errorMessage = e instanceof Error ? e.message : "Login failed";
+      if (errorMessage.includes('Invalid login credentials')) {
+        toast.error("Invalid email or password. Please try again.");
+      } else if (errorMessage.includes('Email not confirmed')) {
+        toast.error("Please check your email and confirm your account before signing in.");
+      } else if (errorMessage.includes('422')) {
+        toast.error("Invalid login data. Please check your email and password.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -39,13 +60,47 @@ export default function Auth() {
 
   const onSignup = async (e: any) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!signupEmail || !signupPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    
+    if (signupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    
+    if (!signupEmail.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    
     try {
       setLoading(true);
-      await signUpWithEmail(signupEmail, signupPassword);
-      toast.success("Check your email to confirm your account.");
-      navigate("/dashboard", { replace: true });
+      const result = await signUpWithEmail(signupEmail, signupPassword);
+      
+      if (result.user && !result.user.email_confirmed_at) {
+        toast.success("Check your email to confirm your account.");
+        // Don't navigate immediately - wait for email confirmation
+      } else if (result.user && result.user.email_confirmed_at) {
+        toast.success("Account created successfully!");
+        navigate("/dashboard", { replace: true });
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Signup failed");
+      const errorMessage = e instanceof Error ? e.message : "Signup failed";
+      if (errorMessage.includes('User already registered')) {
+        toast.error("An account with this email already exists. Please sign in instead.");
+      } else if (errorMessage.includes('Password should be at least')) {
+        toast.error("Password must be at least 6 characters long.");
+      } else if (errorMessage.includes('Invalid email')) {
+        toast.error("Please enter a valid email address.");
+      } else if (errorMessage.includes('422')) {
+        toast.error("Invalid signup data. Please check your email and password.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
