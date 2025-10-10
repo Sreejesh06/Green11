@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import logo from "@/assets/logo.png";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { name: "Rewards", href: "/rewards", icon: Gift },
   { name: "Profile", href: "/profile", icon: User },
