@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Crown, Medal, TrendingUp, TrendingDown, Minus, Search, Award } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Trend = "up" | "down" | "same";
 
@@ -62,6 +63,7 @@ const getTrendIcon = (trend: string) => {
 };
 
 export default function Leaderboard() {
+  const { token } = useAuth();
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +72,17 @@ export default function Leaderboard() {
     let isMounted = true;
 
     async function loadLeaderboard() {
+      if (!token) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/leaderboard`);
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/api/leaderboard`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
         }
@@ -97,7 +108,7 @@ export default function Leaderboard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   const header = data?.header;
   const individualLeaders = data?.individualLeaders ?? [];

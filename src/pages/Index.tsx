@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Lenis from "@studio-freight/lenis";
 import { ArrowRight } from "lucide-react";
@@ -8,6 +8,7 @@ import { RetroGrid } from "@/components/ui/retro-grid";
 import { ZoomParallax } from "@/components/ui/zoom-parallax";
 import DisplayCards from "@/components/ui/display-cards";
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { getLucideIcon } from "@/lib/icon-map";
 import logo from "@/assets/green11-logo.png";
 
@@ -64,6 +65,7 @@ type IndexResponse = {
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [data, setData] = useState<IndexResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +90,7 @@ const Index = () => {
 
     async function loadIndexContent() {
       try {
+        setIsLoading(true);
         const response = await fetch(`${API_BASE_URL}/api/index`);
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
@@ -139,10 +142,17 @@ const Index = () => {
 
   const TaglineIcon = hero?.taglineIcon ? getLucideIcon(hero.taglineIcon) : getLucideIcon("Leaf");
 
-  const handlePrimaryCta = () => {
-    const href = hero?.primaryCta?.href ?? "/dashboard";
-    navigate(href);
-  };
+  const handlePrimaryCta = useCallback(
+    (target: string) => {
+      if (isAuthenticated) {
+        navigate("/dashboard");
+        return;
+      }
+
+      navigate("/auth", { state: { from: { pathname: target } } });
+    },
+    [isAuthenticated, navigate]
+  );
 
   return (
     <div className="min-h-screen">
@@ -175,7 +185,11 @@ const Index = () => {
           </p>
           
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handlePrimaryCta}>
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => handlePrimaryCta(hero?.primaryCta?.href ?? "/dashboard")}
+            >
               {hero?.primaryCta?.label ?? "Join the League"} <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline">
@@ -301,7 +315,11 @@ const Index = () => {
               "Join thousands of students turning sustainable actions into campus glory and real rewards."}
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handlePrimaryCta}>
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => handlePrimaryCta(cta?.primaryCta?.href ?? "/dashboard")}
+            >
               {cta?.primaryCta?.label ?? "Start Your Journey"} <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button size="lg" variant="outline">

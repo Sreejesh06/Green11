@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type NotFoundContent = {
   title: string;
@@ -11,6 +12,7 @@ type NotFoundContent = {
 
 const NotFound = () => {
   const location = useLocation();
+  const { token } = useAuth();
   const [content, setContent] = useState<NotFoundContent | null>(null);
 
   useEffect(() => {
@@ -21,8 +23,16 @@ const NotFound = () => {
     let isMounted = true;
 
     async function loadNotFoundContent() {
+      if (!token) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/notfound`);
+        const response = await fetch(`${API_BASE_URL}/api/notfound`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
         }
@@ -41,7 +51,7 @@ const NotFound = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { getLucideIcon } from "@/lib/icon-map";
 
 type RewardItem = {
@@ -33,6 +34,7 @@ const rarityAccent: Record<string, string> = {
 };
 
 const Rewards = () => {
+  const { token } = useAuth();
   const [data, setData] = useState<RewardsResponse | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
@@ -42,8 +44,17 @@ const Rewards = () => {
     let isMounted = true;
 
     async function fetchRewards() {
+      if (!token) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/rewards`);
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/api/rewards`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
         }
@@ -69,7 +80,7 @@ const Rewards = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat("en-IN"), []);
   const userPoints = data?.userPoints ?? 0;

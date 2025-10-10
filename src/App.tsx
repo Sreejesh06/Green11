@@ -10,8 +10,10 @@ import Rewards from "./pages/Rewards";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { Sidebar } from "./components/Sidebar";
-import { TopBar } from "./components/TopBar";
+import Auth from "./pages/Auth";
+import ProtectedLayout from "./layouts/ProtectedLayout";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -20,34 +22,27 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          
-          {/* Routes with Sidebar/TopBar */}
-          <Route
-            path="/*"
-            element={
-              <div className="flex min-h-screen w-full bg-background">
-                <Sidebar />
-                <div className="flex-1 md:ml-64">
-                  <TopBar />
-                  <main className="min-h-[calc(100vh-4rem)]">
-                    <Routes>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/leaderboard" element={<Leaderboard />} />
-                      <Route path="/rewards" element={<Rewards />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                </div>
-              </div>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/rewards" element={<Rewards />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Index />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

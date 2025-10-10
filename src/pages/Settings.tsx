@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Bell, Globe, Mail, Palette, Shield, User } from "lucide-react";
 
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SettingsToggle = {
   id: string;
@@ -42,6 +43,7 @@ type SettingsResponse = {
 };
 
 const Settings = () => {
+  const { token } = useAuth();
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +52,17 @@ const Settings = () => {
     let isMounted = true;
 
     async function fetchSettings() {
+      if (!token) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/settings`);
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/api/settings`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
         }
@@ -77,7 +88,7 @@ const Settings = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   const handleSave = (section: string) => {
     toast.success(`${section} settings saved! ✅`);

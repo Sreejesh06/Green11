@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { getLucideIcon } from "@/lib/icon-map";
 
 type ProfileBadge = {
@@ -94,6 +95,7 @@ const badgeVariantStyles: Record<string, string> = {
 };
 
 const Profile = () => {
+	const { token } = useAuth();
 	const [data, setData] = useState<ProfileResponse | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -102,8 +104,17 @@ const Profile = () => {
 		let isMounted = true;
 
 		async function loadProfileContent() {
+			if (!token) {
+				return;
+			}
+
 			try {
-				const response = await fetch(`${API_BASE_URL}/api/profile`);
+				setIsLoading(true);
+				const response = await fetch(`${API_BASE_URL}/api/profile`, {
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
 				if (!response.ok) {
 					throw new Error(`Request failed: ${response.status}`);
 				}
@@ -131,7 +142,7 @@ const Profile = () => {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [token]);
 
 	const progressPercent = data
 		? Math.round((data.user.levelProgress.current / data.user.levelProgress.total) * 100)

@@ -1,9 +1,10 @@
 import { Home, Trophy, Gift, User, Settings, LogOut, Menu, X } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import logo from "@/assets/logo.png";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -14,6 +15,14 @@ const navigation = [
 
 export const Sidebar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    setIsMobileMenuOpen(false);
+    navigate("/auth", { replace: true });
+  };
 
   return (
     <>
@@ -95,14 +104,14 @@ export const Sidebar = () => {
               <Settings className="h-5 w-5" />
               <span>Settings</span>
             </NavLink>
-            <NavLink
-              to="/signin"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-destructive hover:bg-destructive/10 w-full"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-destructive transition-all hover:bg-destructive/10"
             >
               <LogOut className="h-5 w-5" />
               <span>Logout</span>
-            </NavLink>
+            </button>
           </div>
         </div>
       </aside>

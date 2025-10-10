@@ -1,7 +1,8 @@
 const express = require("express");
 const PageContent = require("../models/page-content");
 
-const router = express.Router();
+const protectedRouter = express.Router();
+const publicRouter = express.Router();
 
 function createHandler(key) {
   return async (_req, res, next) => {
@@ -19,11 +20,15 @@ function createHandler(key) {
   };
 }
 
-router.get("/index", createHandler("page-index"));
-router.get("/leaderboard", createHandler("page-leaderboard"));
-router.get("/profile", createHandler("page-profile"));
-router.get("/notfound", createHandler("page-notfound"));
-router.get("/rewards", createHandler("page-rewards"));
-router.get("/settings", createHandler("page-settings"));
+publicRouter.get("/index", createHandler("page-index"));
 
-module.exports = router;
+protectedRouter.get("/leaderboard", createHandler("page-leaderboard"));
+protectedRouter.get("/profile", createHandler("page-profile"));
+protectedRouter.get("/notfound", createHandler("page-notfound"));
+protectedRouter.get("/rewards", createHandler("page-rewards"));
+protectedRouter.get("/settings", createHandler("page-settings"));
+
+module.exports = {
+  protectedRouter,
+  publicRouter,
+};

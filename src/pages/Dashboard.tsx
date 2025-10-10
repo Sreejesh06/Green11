@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Challenge = {
   id: number;
@@ -53,6 +54,7 @@ type DashboardResponse = {
 };
 
 export default function Dashboard() {
+  const { token } = useAuth();
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,8 +64,18 @@ export default function Dashboard() {
     let isMounted = true;
 
     async function loadDashboard() {
+      if (!token) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/dashboard`);
+        setIsLoading(true);
+
+        const response = await fetch(`${API_BASE_URL}/api/dashboard`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error(`Request failed: ${response.status}`);
@@ -90,7 +102,7 @@ export default function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [token]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

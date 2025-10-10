@@ -5,15 +5,24 @@ const cors = require("cors");
 
 const { connectDB } = require("./lib/database");
 const { ensureInitialSeeds } = require("./lib/seed");
+const { authMiddleware } = require("./lib/auth");
+const authRouter = require("./routes/auth");
 const dashboardRouter = require("./routes/dashboard");
-const pageContentRouter = require("./routes/page-content");
+const {
+  protectedRouter: protectedPageContentRouter,
+  publicRouter: publicPageContentRouter,
+} = require("./routes/page-content");
 
 const PORT = process.env.PORT || 4000;
 
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required to start the server.");
+}
+
 async function bootstrap() {
   try {
-  await connectDB(process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/ecofinds");
-  const seedInfo = await ensureInitialSeeds();
+    await connectDB(process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/ecofinds");
+    const seedInfo = await ensureInitialSeeds();
 
     const app = express();
 
@@ -24,8 +33,10 @@ async function bootstrap() {
       res.json({ status: "ok" });
     });
 
-  app.use("/api/dashboard", dashboardRouter);
-  app.use("/api", pageContentRouter);
+  app.use("/api/auth", authRouter);
+  app.use("/api", publicPageContentRouter);
+  app.use("/api/dashboard", authMiddleware, dashboardRouter);
+  app.use("/api", authMiddleware, protectedPageContentRouter);
 
     // Centralized error handler keeps responses consistent.
     app.use((err, _req, res, _next) => {
