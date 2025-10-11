@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FollowerPointerCard } from "@/components/ui/following-pointer";
+import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { API_BASE_URL } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Calendar, CheckCircle2, ChevronLeft, Flame, Leaf, MapPin, Trophy } from "lucide-react";
+import { getGeminiEndpoint } from "@/lib/gemini";
 
 interface Challenge {
   id: number;
@@ -67,6 +69,8 @@ export default function ChallengeDetails() {
   });
   const [isLoading, setIsLoading] = useState(!challenge);
   const [error, setError] = useState<string | null>(null);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (challenge || !token || !challengeId) {
@@ -77,8 +81,7 @@ export default function ChallengeDetails() {
 
     const fetchChallenge = async () => {
       try {
-        setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/dashboard`, {
+        const response = await fetch(`${API_BASE_URL}/dashboard`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -117,6 +120,74 @@ export default function ChallengeDetails() {
   }, [challenge, challengeId, token]);
 
   const heroImage = useMemo(() => buildHeroImage(Number.parseInt(challengeId ?? "0", 10)), [challengeId]);
+  const promptContext = useMemo(() => {
+    if (!challenge) {
+      return "";
+    }
+
+    return `You are helping a student team complete the sustainability challenge "${challenge.title}". Difficulty: ${challenge.difficulty}. Deadline: ${challenge.deadline}. Reward: ${challenge.points} Green Points. Provide concise, practical steps they can take right now, including any campus-friendly ideas.`;
+  }, [challenge]);
+
+  const handleGeminiPrompt = useCallback(
+    async (message: string) => {
+      const trimmed = message.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        setAiError("Gemini API key is missing. Set VITE_GEMINI_API_KEY in your frontend env file.");
+        return;
+      }
+
+      try {
+        setAiError(null);
+        setAiResponse(null);
+
+        const prompt = promptContext ? `${promptContext}\n\nUser question: ${trimmed}` : trimmed;
+
+        const { endpoint } = await getGeminiEndpoint(apiKey);
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }],
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          const messageText = payload?.error?.message ?? `Gemini request failed (${response.status})`;
+          throw new Error(messageText);
+        }
+
+        const payload = await response.json();
+        const textResponse: string | undefined = payload?.candidates?.[0]?.content?.parts
+          ?.map((part: { text?: string }) => part.text ?? "")
+          .join("")
+          .trim();
+
+        if (!textResponse) {
+          throw new Error("Gemini did not return any content. Try rephrasing your question.");
+        }
+
+        setAiResponse(textResponse);
+      } catch (err) {
+        setAiResponse(null);
+        setAiError(err instanceof Error ? err.message : "Failed to reach Gemini.");
+      }
+    },
+    [promptContext]
+  );
 
   const handleStartChallenge = () => {
     if (!challenge) {
@@ -278,6 +349,32 @@ export default function ChallengeDetails() {
                   Submit by {challenge.deadline} to qualify for spotlight consideration.
                 </li>
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="space-y-4 p-6">
+              <h2 className="text-lg font-semibold text-foreground">Plan with Gemini</h2>
+              <p className="text-sm text-muted-foreground">
+                Ask Gemini for quick tips on organising your team, gathering supplies, or preparing proof before you head out.
+                It already knows the key details for this challenge.
+              </p>
+              <AIInputWithLoading
+                className="w-full"
+                placeholder="Ask Gemini for guidance"
+                onSubmit={handleGeminiPrompt}
+                loadingDuration={3500}
+              />
+              {aiResponse && (
+                <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm leading-relaxed text-foreground">
+                  {aiResponse}
+                </div>
+              )}
+              {aiError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  {aiError}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -116,7 +116,11 @@ const Rewards = () => {
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat("en-IN"), []);
   const userPoints = data?.userPoints ?? 0;
-  const categories = data?.categories ?? [];
+  const categories = useMemo(() => {
+    const source = data?.categories ?? [];
+    const unique = Array.from(new Set(source.filter(Boolean)));
+    return unique.filter((item) => item !== "All");
+  }, [data?.categories]);
 
   const filteredRewards = useMemo(() => {
     if (!data) {
