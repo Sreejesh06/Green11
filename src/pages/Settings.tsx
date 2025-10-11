@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ type SettingsToggle = {
   id: string;
   label: string;
   description: string;
-  defaultChecked?: boolean;
+  enabled: boolean;
 };
 
 type SettingsResponse = {
@@ -37,13 +37,14 @@ type SettingsResponse = {
     };
   };
   appearance: {
-    darkModeDefault: boolean;
+    darkMode: boolean;
+    selectedLanguage: string;
     languages: Array<{ value: string; label: string }>;
   };
 };
 
 const Settings = () => {
-  const { token } = useAuth();
+  const { token, refreshUser } = useAuth();
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +91,177 @@ const Settings = () => {
     };
   }, [token]);
 
-  const handleSave = (section: string) => {
-    toast.success(`${section} settings saved! ✅`);
+  const updateProfileField = (field: keyof SettingsResponse["profile"], value: string) => {
+    setData((prev) => (prev ? { ...prev, profile: { ...prev.profile, [field]: value } } : prev));
+  };
+
+  const updateToggle = (
+    section: "emailPreferences" | "pushNotifications",
+    toggleId: string,
+    enabled: boolean
+  ) => {
+    setData((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const updated = prev[section].map((item) =>
+        item.id === toggleId ? { ...item, enabled } : item
+      );
+
+      return { ...prev, [section]: updated };
+    });
+  };
+
+  const updatePrivacyToggle = (toggleId: string, enabled: boolean) => {
+    setData((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const toggles = prev.privacy.toggles.map((item) =>
+        item.id === toggleId ? { ...item, enabled } : item
+      );
+
+      return { ...prev, privacy: { ...prev.privacy, toggles } };
+    });
+  };
+
+  const updateAppearance = (updates: Partial<SettingsResponse["appearance"]>) => {
+    setData((prev) => (prev ? { ...prev, appearance: { ...prev.appearance, ...updates } } : prev));
+  };
+
+  const sendUpdate = useCallback(
+    async <T,>(path: string, body: unknown) => {
+      if (!token) {
+        throw new Error("You must be signed in to update settings.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/settings${path}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        let message = `Request failed: ${response.status}`;
+        try {
+          const errorPayload = await response.json();
+          if (typeof errorPayload.message === "string") {
+            message = errorPayload.message;
+          }
+        } catch (_error) {
+          // ignore parse errors
+        }
+        throw new Error(message);
+      }
+
+      return (await response.json()) as T;
+    },
+    [token]
+  );
+
+  const handleProfileSave = async () => {
+    if (!data) {
+      return;
+    }
+
+    try {
+      const payload = await sendUpdate<{ profile: SettingsResponse["profile"] }>(
+        "/profile",
+        data.profile
+      );
+      setData((prev) => (prev ? { ...prev, profile: payload.profile } : prev));
+      await refreshUser();
+      toast.success("Profile settings saved! ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save profile");
+    }
+  };
+
+  const handleEmailPreferencesSave = async () => {
+    if (!data) {
+      return;
+    }
+
+    try {
+      const payload = await sendUpdate<{ emailPreferences: SettingsToggle[] }>(
+        "/email-preferences",
+        {
+          emailPreferences: data.emailPreferences.map(({ id, enabled }) => ({ id, enabled })),
+        }
+      );
+      setData((prev) => (prev ? { ...prev, emailPreferences: payload.emailPreferences } : prev));
+      toast.success("Email preferences saved! ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save email preferences");
+    }
+  };
+
+  const handlePushNotificationsSave = async () => {
+    if (!data) {
+      return;
+    }
+
+    try {
+      const payload = await sendUpdate<{ pushNotifications: SettingsToggle[] }>(
+        "/push-notifications",
+        {
+          pushNotifications: data.pushNotifications.map(({ id, enabled }) => ({ id, enabled })),
+        }
+      );
+      setData((prev) => (prev ? { ...prev, pushNotifications: payload.pushNotifications } : prev));
+      toast.success("Notification settings saved! ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save notifications");
+    }
+  };
+
+  const handlePrivacySave = async () => {
+    if (!data) {
+      return;
+    }
+
+    try {
+      const payload = await sendUpdate<{ privacy: SettingsResponse["privacy"] }>("/privacy", {
+        toggles: data.privacy.toggles.map(({ id, enabled }) => ({ id, enabled })),
+      });
+      setData((prev) => (prev ? { ...prev, privacy: payload.privacy } : prev));
+      toast.success("Privacy settings saved! ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save privacy settings");
+    }
+  };
+
+  const handleAppearanceSave = async () => {
+    if (!data) {
+      return;
+    }
+
+    try {
+      const payload = await sendUpdate<{ appearance: SettingsResponse["appearance"] }>(
+        "/appearance",
+        {
+          darkMode: data.appearance.darkMode,
+          language: data.appearance.selectedLanguage,
+        }
+      );
+      setData((prev) => (prev ? { ...prev, appearance: payload.appearance } : prev));
+      toast.success("Appearance preferences saved! ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to save appearance settings");
+    }
+  };
+
+  const handlePasswordUpdate = () => {
+    toast.info("Password updates are not available yet.");
   };
 
   const languageOptions = data?.appearance.languages ?? [];
-  const defaultLanguage = useMemo(() => languageOptions[0]?.value ?? "en", [languageOptions]);
+  const selectedLanguage = data?.appearance.selectedLanguage ?? languageOptions[0]?.value ?? "en";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
@@ -134,7 +300,8 @@ const Settings = () => {
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
                     id="firstName"
-                    defaultValue={data.profile.firstName}
+                    value={data.profile.firstName}
+                    onChange={(event) => updateProfileField("firstName", event.target.value)}
                     className="glass-input"
                   />
                 </div>
@@ -142,7 +309,8 @@ const Settings = () => {
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
-                    defaultValue={data.profile.lastName}
+                    value={data.profile.lastName}
+                    onChange={(event) => updateProfileField("lastName", event.target.value)}
                     className="glass-input"
                   />
                 </div>
@@ -152,7 +320,8 @@ const Settings = () => {
                 <Input
                   id="email"
                   type="email"
-                  defaultValue={data.profile.email}
+                  value={data.profile.email}
+                  onChange={(event) => updateProfileField("email", event.target.value)}
                   className="glass-input"
                 />
               </div>
@@ -160,12 +329,13 @@ const Settings = () => {
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
-                  defaultValue={data.profile.username}
+                  value={data.profile.username}
+                  onChange={(event) => updateProfileField("username", event.target.value)}
                   className="glass-input"
                 />
               </div>
               <Button
-                onClick={() => handleSave("Profile")}
+                onClick={handleProfileSave}
                 className="bg-primary hover:bg-primary/90"
               >
                 Save Changes
@@ -189,7 +359,12 @@ const Settings = () => {
                       <Label>{preference.label}</Label>
                       <p className="text-sm text-muted-foreground">{preference.description}</p>
                     </div>
-                    <Switch defaultChecked={preference.defaultChecked} />
+                    <Switch
+                      checked={preference.enabled}
+                      onCheckedChange={(checked) =>
+                        updateToggle("emailPreferences", preference.id, checked)
+                      }
+                    />
                   </div>
                   {preference.id !== data.emailPreferences[data.emailPreferences.length - 1].id && (
                     <Separator className="my-4" />
@@ -197,7 +372,7 @@ const Settings = () => {
                 </div>
               ))}
               <Button
-                onClick={() => handleSave("Email")}
+                onClick={handleEmailPreferencesSave}
                 className="bg-accent hover:bg-accent/90"
               >
                 Save Preferences
@@ -221,7 +396,12 @@ const Settings = () => {
                       <Label>{notification.label}</Label>
                       <p className="text-sm text-muted-foreground">{notification.description}</p>
                     </div>
-                    <Switch defaultChecked={notification.defaultChecked} />
+                    <Switch
+                      checked={notification.enabled}
+                      onCheckedChange={(checked) =>
+                        updateToggle("pushNotifications", notification.id, checked)
+                      }
+                    />
                   </div>
                   {notification.id !== data.pushNotifications[data.pushNotifications.length - 1].id && (
                     <Separator className="my-4" />
@@ -229,7 +409,7 @@ const Settings = () => {
                 </div>
               ))}
               <Button
-                onClick={() => handleSave("Notification")}
+                onClick={handlePushNotificationsSave}
                 className="bg-secondary hover:bg-secondary/90"
               >
                 Save Settings
@@ -253,13 +433,22 @@ const Settings = () => {
                       <Label>{toggle.label}</Label>
                       <p className="text-sm text-muted-foreground">{toggle.description}</p>
                     </div>
-                    <Switch defaultChecked={toggle.defaultChecked} />
+                    <Switch
+                      checked={toggle.enabled}
+                      onCheckedChange={(checked) => updatePrivacyToggle(toggle.id, checked)}
+                    />
                   </div>
                   {toggle.id !== data.privacy.toggles[data.privacy.toggles.length - 1].id && (
                     <Separator className="my-4" />
                   )}
                 </div>
               ))}
+              <Button
+                onClick={handlePrivacySave}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Save Privacy Preferences
+              </Button>
               <Separator />
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">Change Password</Label>
@@ -282,7 +471,7 @@ const Settings = () => {
                   className="glass-input"
                 />
               </div>
-              <Button onClick={() => handleSave("Security")} variant="destructive">
+              <Button onClick={handlePasswordUpdate} variant="destructive">
                 Update Password
               </Button>
             </CardContent>
@@ -302,7 +491,10 @@ const Settings = () => {
                   <Label>Dark Mode</Label>
                   <p className="text-sm text-muted-foreground">Switch to dark theme</p>
                 </div>
-                <Switch defaultChecked={data.appearance.darkModeDefault} />
+                <Switch
+                  checked={data.appearance.darkMode}
+                  onCheckedChange={(checked) => updateAppearance({ darkMode: checked })}
+                />
               </div>
               <Separator />
               <div className="space-y-2">
@@ -312,7 +504,10 @@ const Settings = () => {
                 </Label>
                 <select
                   id="language"
-                  defaultValue={defaultLanguage}
+                  value={selectedLanguage}
+                  onChange={(event) =>
+                    updateAppearance({ selectedLanguage: event.target.value })
+                  }
                   className="glass-input w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {languageOptions.map((language) => (
@@ -323,7 +518,7 @@ const Settings = () => {
                 </select>
               </div>
               <Button
-                onClick={() => handleSave("Appearance")}
+                onClick={handleAppearanceSave}
                 className="bg-primary hover:bg-primary/90"
               >
                 Save Preferences

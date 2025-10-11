@@ -10,6 +10,46 @@ const {
 
 const router = express.Router();
 
+function splitName(name) {
+  if (!name) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const [first, ...rest] = trimmed.split(/\s+/);
+  return { firstName: first, lastName: rest.join(" ") };
+}
+
+async function generateUniqueUsername(base) {
+  const sanitizedBase = (base || "user")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "");
+
+  const seed = sanitizedBase || "user";
+
+  async function findAvailable(candidate, attempt) {
+    const exists = await User.exists({ username: candidate });
+    if (!exists) {
+      return candidate;
+    }
+
+    const nextAttempt = attempt + 1;
+
+    if (nextAttempt > 1000) {
+      return `${seed}${Date.now()}`;
+    }
+
+    const nextCandidate = `${seed}${nextAttempt}`;
+    return findAvailable(nextCandidate, nextAttempt);
+  }
+
+  return findAvailable(seed, 0);
+}
+
 router.post("/signup", async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -29,7 +69,18 @@ router.post("/signup", async (req, res, next) => {
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await User.create({ name, email: email.toLowerCase(), passwordHash });
+    const normalizedEmail = email.toLowerCase();
+    const { firstName, lastName } = splitName(name);
+    const username = await generateUniqueUsername(normalizedEmail.split("@")[0]);
+
+    const user = await User.create({
+      name: name.trim(),
+      firstName,
+      lastName,
+      email: normalizedEmail,
+      username,
+      passwordHash,
+    });
     const token = signToken(user);
 
     return res.status(201).json({

@@ -13,6 +13,9 @@ type AuthUser = {
   id: string;
   name: string;
   email: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
 };
 
 type AuthResponse = {
@@ -28,6 +31,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<AuthUser>;
   signup: (name: string, email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  refreshUser: () => Promise<AuthUser | null>;
 };
 
 const STORAGE_TOKEN_KEY = "green11.auth.token";
@@ -148,6 +152,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [handleAuthRequest]
   );
 
+  const refreshUser = useCallback(async () => {
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh user session");
+      }
+
+      const payload = (await response.json()) as { user: AuthUser };
+      persistSession({ token, user: payload.user });
+      return payload.user;
+    } catch (_error) {
+      clearSession();
+      return null;
+    }
+  }, [clearSession, persistSession, token]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -157,8 +186,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login,
       signup,
       logout: clearSession,
+      refreshUser,
     }),
-    [clearSession, loading, login, signup, token, user]
+    [clearSession, loading, login, refreshUser, signup, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

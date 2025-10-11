@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
+import ChallengeDetails from "./pages/ChallengeDetails";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<ProtectedLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/challenges/:challengeId" element={<ChallengeDetails />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/rewards" element={<Rewards />} />
                 <Route path="/profile" element={<Profile />} />

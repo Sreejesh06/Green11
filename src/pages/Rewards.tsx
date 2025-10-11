@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Filter, Star } from "lucide-react";
 
@@ -33,54 +33,86 @@ const rarityAccent: Record<string, string> = {
   legendary: "shadow-[0_0_30px_-8px_rgba(234,179,8,0.7)]"
 };
 
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
 const Rewards = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [data, setData] = useState<RewardsResponse | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [redeemingRewardId, setRedeemingRewardId] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-    async function fetchRewards() {
-      if (!token) {
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/rewards`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`Request failed: ${response.status}`);
-        }
-
-        const payload: RewardsResponse = await response.json();
-        if (isMounted) {
-          setData(payload);
-          setError(null);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load rewards");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+  const loadRazorpayCheckout = useCallback(async () => {
+    if (window.Razorpay) {
+      return true;
     }
 
-    fetchRewards();
+    return new Promise<boolean>((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }, []);
 
-    return () => {
-      isMounted = false;
-    };
+  const fetchRewards = useCallback(async () => {
+    if (!token) {
+      if (isMountedRef.current) {
+        setData(null);
+        setError(null);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    try {
+      if (isMountedRef.current) {
+        setIsLoading(true);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/rewards`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      const payload: RewardsResponse = await response.json();
+      if (isMountedRef.current) {
+        setData(payload);
+        setError(null);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to load rewards");
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
   }, [token]);
+
+  useEffect(() => {
+    fetchRewards();
+  }, [fetchRewards]);
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat("en-IN"), []);
   const userPoints = data?.userPoints ?? 0;
@@ -98,13 +130,121 @@ const Rewards = () => {
     return data.rewards.filter((reward) => reward.category === selectedCategory);
   }, [data, selectedCategory]);
 
-  const handleRedeem = (reward: RewardItem) => {
-    if (userPoints >= reward.cost) {
-      toast.success(`Successfully redeemed ${reward.name}! 🎉`);
-    } else {
-      toast.error(`You need ${numberFormatter.format(reward.cost - userPoints)} more GP to redeem this item.`);
+  const handleRedeem = useCallback(async (reward: RewardItem) => {
+    if (!token) {
+      toast.error("Please sign in to redeem rewards.");
+      return;
     }
-  };
+
+    if (userPoints < reward.cost) {
+      toast.error(`You need ${numberFormatter.format(reward.cost - userPoints)} more GP to redeem this item.`);
+      return;
+    }
+
+    try {
+      setRedeemingRewardId(reward.id);
+
+      const response = await fetch(`${API_BASE_URL}/api/rewards/redeem`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rewardId: reward.id }),
+      });
+
+      if (!response.ok) {
+        let message = `Request failed: ${response.status}`;
+        try {
+          const payload = await response.json();
+          if (typeof payload.message === "string") {
+            message = payload.message;
+          }
+        } catch (_err) {
+          // ignore JSON parse errors
+        }
+        throw new Error(message);
+      }
+
+      const payload = (await response.json()) as {
+        key: string;
+        order: { id: string; amount: number; currency: string };
+      };
+
+      const scriptLoaded = await loadRazorpayCheckout();
+      if (!scriptLoaded || !window.Razorpay) {
+        throw new Error("Unable to load Razorpay checkout. Please try again.");
+      }
+
+      const { order } = payload;
+
+      const razorpay = new window.Razorpay({
+        key: payload.key,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Green11 Rewards",
+        description: reward.name,
+        order_id: order.id,
+        prefill: {
+          name: user?.name ?? "",
+          email: user?.email ?? "",
+        },
+        theme: {
+          color: "#10B981",
+        },
+        notes: {
+          rewardId: String(reward.id),
+          rewardName: reward.name,
+        },
+        handler: async (paymentResponse: Record<string, string>) => {
+          try {
+            const verifyResponse = await fetch(`${API_BASE_URL}/api/rewards/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                orderId: order.id,
+                paymentId: paymentResponse.razorpay_payment_id,
+                signature: paymentResponse.razorpay_signature,
+              }),
+            });
+
+            if (!verifyResponse.ok) {
+              let message = "Payment verification failed.";
+              try {
+                const verifyPayload = await verifyResponse.json();
+                if (typeof verifyPayload.message === "string") {
+                  message = verifyPayload.message;
+                }
+              } catch (_err) {
+                // ignore JSON parse errors
+              }
+              throw new Error(message);
+            }
+
+            toast.success(`Payment captured for ${reward.name}! 🎉`);
+            await fetchRewards();
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Unable to verify payment.");
+          } finally {
+            setRedeemingRewardId(null);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setRedeemingRewardId(null);
+          },
+        },
+      });
+
+      razorpay.open();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to start checkout.");
+      setRedeemingRewardId(null);
+    }
+  }, [token, user, userPoints, numberFormatter, loadRazorpayCheckout, fetchRewards]);
 
   return (
     <div className="space-y-6 p-6">
@@ -165,6 +305,7 @@ const Rewards = () => {
               const Icon = getLucideIcon(reward.iconName ?? "Gift");
               const canAfford = userPoints >= reward.cost;
               const rarityGlow = reward.rarity ? rarityAccent[reward.rarity] ?? "" : "";
+              const isRedeeming = redeemingRewardId === reward.id;
 
               return (
                 <Card
@@ -195,11 +336,11 @@ const Rewards = () => {
                       <Button
                         variant={canAfford ? "default" : "outline"}
                         size="sm"
-                        disabled={!canAfford}
-                        onClick={() => handleRedeem(reward)}
+                        disabled={!canAfford || isRedeeming}
+                        onClick={() => void handleRedeem(reward)}
                         className={canAfford ? "bg-primary hover:bg-primary/90" : ""}
                       >
-                        {canAfford ? "Redeem" : "Locked"}
+                        {isRedeeming ? "Processing..." : canAfford ? "Redeem" : "Locked"}
                       </Button>
                     </div>
                   </CardContent>

@@ -13,11 +13,25 @@ function ensureJwtSecret() {
 }
 
 function buildUserPayload(userDoc) {
-  return {
+  const payload = {
     id: userDoc._id.toString(),
     name: userDoc.name,
     email: userDoc.email,
   };
+
+  if (userDoc.username) {
+    payload.username = userDoc.username;
+  }
+
+  if (userDoc.firstName) {
+    payload.firstName = userDoc.firstName;
+  }
+
+  if (userDoc.lastName) {
+    payload.lastName = userDoc.lastName;
+  }
+
+  return payload;
 }
 
 async function hashPassword(password) {
