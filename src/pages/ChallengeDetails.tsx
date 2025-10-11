@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Calendar, CheckCircle2, ChevronLeft, Flame, Leaf, MapPin, Trophy } from "lucide-react";
 import { getGeminiEndpoint } from "@/lib/gemini";
+import { GeminiResponse } from "@/components/GeminiResponse";
 
 interface Challenge {
   id: number;
@@ -137,7 +138,7 @@ export default function ChallengeDetails() {
 
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        setAiError("Gemini API key is missing. Set VITE_GEMINI_API_KEY in your frontend env file.");
+        setAiError("AI helper key is missing. Set VITE_GEMINI_API_KEY in your frontend env file.");
         return;
       }
 
@@ -166,7 +167,7 @@ export default function ChallengeDetails() {
 
         if (!response.ok) {
           const payload = await response.json().catch(() => null);
-          const messageText = payload?.error?.message ?? `Gemini request failed (${response.status})`;
+          const messageText = payload?.error?.message ?? `AI helper request failed (${response.status})`;
           throw new Error(messageText);
         }
 
@@ -177,13 +178,13 @@ export default function ChallengeDetails() {
           .trim();
 
         if (!textResponse) {
-          throw new Error("Gemini did not return any content. Try rephrasing your question.");
+          throw new Error("The AI helper did not return any content. Try rephrasing your question.");
         }
 
         setAiResponse(textResponse);
       } catch (err) {
         setAiResponse(null);
-        setAiError(err instanceof Error ? err.message : "Failed to reach Gemini.");
+        setAiError(err instanceof Error ? err.message : "Failed to reach the AI helper.");
       }
     },
     [promptContext]
@@ -354,20 +355,20 @@ export default function ChallengeDetails() {
 
           <Card className="glass-card">
             <CardContent className="space-y-4 p-6">
-              <h2 className="text-lg font-semibold text-foreground">Plan with Gemini</h2>
+              <h2 className="text-lg font-semibold text-foreground">Plan with AI</h2>
               <p className="text-sm text-muted-foreground">
-                Ask Gemini for quick tips on organising your team, gathering supplies, or preparing proof before you head out.
+                Ask the AI helper for quick tips on organising your team, gathering supplies, or preparing proof before you head out.
                 It already knows the key details for this challenge.
               </p>
               <AIInputWithLoading
                 className="w-full"
-                placeholder="Ask Gemini for guidance"
+                placeholder="Ask the AI helper for guidance"
                 onSubmit={handleGeminiPrompt}
                 loadingDuration={3500}
               />
               {aiResponse && (
-                <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm leading-relaxed text-foreground">
-                  {aiResponse}
+                <div className="rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm">
+                  <GeminiResponse text={aiResponse} className="text-sm" />
                 </div>
               )}
               {aiError && (

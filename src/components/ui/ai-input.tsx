@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { LoaderCircle, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { GeminiResponse } from "@/components/GeminiResponse";
 import { cn } from "@/lib/utils";
 import { getGeminiEndpoint } from "@/lib/gemini";
 
@@ -252,7 +253,7 @@ export const MorphPanel: React.FC<MorphPanelProps> = ({
 
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        setErrorMessage("Gemini API key is missing. Set VITE_GEMINI_API_KEY in your .env file.");
+        setErrorMessage("AI helper key is missing. Set VITE_GEMINI_API_KEY in your .env file.");
         return;
       }
 
@@ -284,7 +285,7 @@ export const MorphPanel: React.FC<MorphPanelProps> = ({
 
         if (!response.ok) {
           const errorPayload = await response.json().catch(() => null);
-          const messageText = errorPayload?.error?.message ?? `Gemini request failed (${response.status})`;
+          const messageText = errorPayload?.error?.message ?? `AI helper request failed (${response.status})`;
           throw new Error(messageText);
         }
 
@@ -295,13 +296,13 @@ export const MorphPanel: React.FC<MorphPanelProps> = ({
           .trim();
 
         if (!textResponse) {
-          throw new Error("Gemini did not return any content. Try rephrasing your question.");
+          throw new Error("The AI helper did not return any content. Try rephrasing your question.");
         }
 
         setResponseText(textResponse);
       } catch (error) {
         setResponseText(null);
-        setErrorMessage(error instanceof Error ? error.message : "Failed to reach Gemini.");
+        setErrorMessage(error instanceof Error ? error.message : "Failed to reach the AI helper.");
       } finally {
         setIsSubmitting(false);
       }
@@ -491,7 +492,7 @@ const InputForm = React.forwardRef<HTMLTextAreaElement, InputFormProps>(({ place
                     Generating...
                   </span>
                 ) : (
-                  <span className="text-xs">Send to Gemini</span>
+                  <span className="text-xs">Send to AI helper</span>
                 )}
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={triggerClose}>
@@ -536,7 +537,7 @@ const InputForm = React.forwardRef<HTMLTextAreaElement, InputFormProps>(({ place
                   exit={{ opacity: 0, y: 8 }}
                   className="rounded-lg border border-primary/20 bg-primary/10 p-3 text-xs text-foreground"
                 >
-                  {responseText}
+                  <GeminiResponse text={responseText} className="text-xs" />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -44,8 +44,8 @@ async function fetchAvailableModel(apiKey: string, apiVersion: string): Promise<
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
     const errorMessage =
-      payload?.error?.message ||
-      `Unable to list Gemini models (status ${response.status}). Set VITE_GEMINI_MODEL to override.`;
+  payload?.error?.message ||
+  `Unable to list AI helper models (status ${response.status}). Set VITE_GEMINI_MODEL to override.`;
     throw new Error(errorMessage);
   }
 
@@ -55,7 +55,7 @@ async function fetchAvailableModel(apiKey: string, apiVersion: string): Promise<
 
   if (!resolvedModel) {
     throw new Error(
-      "No Gemini models with generateContent capability found. Set VITE_GEMINI_MODEL to override."
+  "No AI helper models with generateContent capability found. Set VITE_GEMINI_MODEL to override."
     );
   }
 
