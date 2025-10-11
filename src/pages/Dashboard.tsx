@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { API_BASE_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
+import { getAvatarIcon } from "@/lib/avatar-icons";
 
 type Challenge = {
   id: number;
@@ -539,29 +541,38 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex gap-3 items-start">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold">
-                      {activity.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {activity.user}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.action}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {activity.time}
-                      </p>
-                    </div>
-                    {activity.points > 0 && (
-                      <div className="flex-shrink-0 text-accent font-bold text-sm">
-                        +{activity.points}
+                {recentActivities.map((activity) => {
+                  const activityAvatar = getAvatarIcon(activity.avatar);
+
+                  return (
+                    <div key={activity.id} className="flex gap-3 items-start">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                        {activityAvatar ? (
+                          <AvatarImage src={activityAvatar.src} alt={activityAvatar.alt} />
+                        ) : null}
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-sm font-bold text-primary-foreground">
+                          {activity.avatar}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {activity.user}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.action}
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">
+                          {activity.time}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {activity.points > 0 && (
+                        <div className="flex-shrink-0 text-accent font-bold text-sm">
+                          +{activity.points}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

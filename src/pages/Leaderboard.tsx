@@ -5,9 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trophy, Crown, Medal, TrendingUp, TrendingDown, Minus, Search, Award } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { API_BASE_URL } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { IconCredits } from "@/components/IconCredits";
+import { getAvatarIcon } from "@/lib/avatar-icons";
 
 type Trend = "up" | "down" | "same";
 
@@ -117,7 +119,7 @@ export default function Leaderboard() {
   const seasonStats = data?.seasonStats ?? [];
 
   return (
-    <div className="p-6 space-y-6">
+  <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -146,7 +148,7 @@ export default function Leaderboard() {
         </div>
       )}
 
-      <Tabs defaultValue="individual" className="w-full">
+  <Tabs defaultValue="individual" className="w-full">
         <TabsList className="glass-card w-full md:w-auto mb-6">
           <TabsTrigger value="individual" className="flex-1 md:flex-none">
             Individual Rankings
@@ -181,6 +183,7 @@ export default function Leaderboard() {
                   <div className="space-y-3">
                     {individualLeaders.map((player) => {
                       const rankDisplay = getRankDisplay(player.rank);
+                      const icon = getAvatarIcon(player.avatar);
                       return (
                         <div
                           key={player.rank}
@@ -196,6 +199,7 @@ export default function Leaderboard() {
 
                             {/* Avatar */}
                             <Avatar className="w-14 h-14 ring-2 ring-primary/20">
+                              {icon ? <AvatarImage src={icon.src} alt={icon.alt} /> : null}
                               <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground font-bold text-lg">
                                 {player.avatar}
                               </AvatarFallback>
@@ -367,6 +371,8 @@ export default function Leaderboard() {
           </div>
         </div>
       </Tabs>
+
+      <IconCredits className="text-center" />
     </div>
   );
 }

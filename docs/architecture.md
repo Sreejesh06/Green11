@@ -16,7 +16,7 @@ This document explains how the Green11 platform is organised so new contributors
         │
         └── Razorpay sandbox (reward checkout)
 ```
-
+ 
 ## Frontend Layers (`src/`)
 
 | Layer | Purpose | Key directories |

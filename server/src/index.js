@@ -10,6 +10,7 @@ const authRouter = require("./routes/auth");
 const dashboardRouter = require("./routes/dashboard");
 const settingsRouter = require("./routes/settings");
 const rewardsRouter = require("./routes/rewards");
+const wasteRouter = require("./routes/waste");
 const {
   protectedRouter: protectedPageContentRouter,
   publicRouter: publicPageContentRouter,
@@ -49,6 +50,7 @@ async function bootstrap() {
   app.use("/api", publicPageContentRouter);
   app.use("/api/dashboard", authMiddleware, dashboardRouter);
   app.use("/api/rewards", authMiddleware, rewardsRouter);
+  app.use("/api/waste", authMiddleware, wasteRouter);
   app.use("/api/settings", authMiddleware, settingsRouter);
   app.use("/api", authMiddleware, protectedPageContentRouter);
 

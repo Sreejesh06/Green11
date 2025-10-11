@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
 	Award,
@@ -22,7 +22,9 @@ import {
 
 import { API_BASE_URL } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAvatarIcon } from "@/lib/avatar-icons";
 import { getLucideIcon } from "@/lib/icon-map";
+import { useToast } from "@/hooks/use-toast";
 
 type ProfileBadge = {
 	iconName: string;
@@ -99,6 +101,57 @@ const Profile = () => {
 	const [data, setData] = useState<ProfileResponse | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const { toast } = useToast();
+
+	const handleShare = async () => {
+		if (!data) {
+			return;
+		}
+
+		const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+		const shareText = `Celebrating ${data.user.name}'s sustainability progress on Green11!`;
+		const shareTitle = "Green11 Sustainability Journey";
+
+		if (typeof navigator !== "undefined" && navigator.share) {
+			try {
+				await navigator.share({
+					title: shareTitle,
+					text: shareText,
+					url: shareUrl
+				});
+				toast({
+					description: "Thanks for spreading the word!"
+				});
+				return;
+			} catch (err) {
+				if (err instanceof Error && err.name === "AbortError") {
+					return;
+				}
+				toast({
+					variant: "destructive",
+					title: "Could not open share sheet",
+					description: "We'll redirect you to a social share page instead."
+				});
+			}
+		}
+
+		const encodedMessage = encodeURIComponent(`${shareText} ${shareUrl}`.trim());
+		const shareTarget = `https://twitter.com/intent/tweet?text=${encodedMessage}`;
+		const newWindow = window.open(shareTarget, "_blank", "noopener,noreferrer");
+
+		if (!newWindow) {
+			toast({
+				variant: "destructive",
+				title: "Pop-up blocked",
+				description: "Allow pop-ups to share your profile on social media."
+			});
+			return;
+		}
+
+		toast({
+			description: "Opening social sharing options…"
+		});
+	};
 
 	useEffect(() => {
 		let isMounted = true;
@@ -153,6 +206,7 @@ const Profile = () => {
 		data?.achievements.filter((achievement) => achievement.earned).length ?? 0;
 
 	const numberFormatter = useMemo(() => new Intl.NumberFormat("en-IN"), []);
+	const avatarIcon = data ? getAvatarIcon(data.user.initials) : undefined;
 
 	return (
 		<div className="p-6 space-y-6">
@@ -174,6 +228,9 @@ const Profile = () => {
 						<CardContent className="p-8">
 							<div className="flex flex-col gap-6 md:flex-row md:items-start">
 								<Avatar className="h-28 w-28 ring-4 ring-primary/30">
+									{avatarIcon ? (
+										<AvatarImage src={avatarIcon.src} alt={avatarIcon.alt} />
+									) : null}
 									<AvatarFallback className="bg-gradient-to-br from-primary via-primary-glow to-secondary text-4xl font-bold text-primary-foreground">
 										{data.user.initials}
 									</AvatarFallback>
@@ -216,7 +273,7 @@ const Profile = () => {
 									<Button variant="outline" size="icon">
 										<Settings className="h-4 w-4" />
 									</Button>
-									<Button variant="outline" size="icon">
+									<Button variant="outline" size="icon" onClick={handleShare}>
 										<Share2 className="h-4 w-4" />
 									</Button>
 									<Button className="bg-primary text-primary-foreground hover:bg-primary/90">

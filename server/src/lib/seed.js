@@ -1,7 +1,9 @@
 const Dashboard = require("../models/dashboard");
 const PageContent = require("../models/page-content");
+const WasteManagement = require("../models/waste-management");
 const { dashboardMock } = require("../data/mockData");
 const { pageContents } = require("../data/pageContent");
+const { wasteManagementMock } = require("../data/wasteManagement");
 
 async function ensureDashboardSeed() {
   const existing = await Dashboard.findOne({ key: dashboardMock.key });
@@ -47,10 +49,39 @@ async function ensurePageContentSeed() {
   return results;
 }
 
-async function ensureInitialSeeds() {
-  const dashboard = await ensureDashboardSeed();
-  const pages = await ensurePageContentSeed();
-  return { dashboard, pages };
+async function ensureWasteManagementSeed() {
+  const existing = await WasteManagement.findOne({ key: wasteManagementMock.key });
+
+  if (!existing) {
+    await WasteManagement.create(wasteManagementMock);
+    return { created: true, updated: false };
+  }
+
+  await WasteManagement.updateOne(
+    { key: wasteManagementMock.key },
+    {
+      $set: {
+        hero: wasteManagementMock.hero,
+        overview: wasteManagementMock.overview,
+        quickActions: wasteManagementMock.quickActions,
+        sortingGuide: wasteManagementMock.sortingGuide,
+        disposalLogs: wasteManagementMock.disposalLogs,
+        reductionSeries: wasteManagementMock.reductionSeries,
+        streamBreakdown: wasteManagementMock.streamBreakdown,
+        recognitionBoard: wasteManagementMock.recognitionBoard,
+        goals: wasteManagementMock.goals
+      }
+    }
+  );
+
+  return { created: false, updated: true };
 }
 
-module.exports = { ensureDashboardSeed, ensurePageContentSeed, ensureInitialSeeds };
+async function ensureInitialSeeds() {
+  const dashboard = await ensureDashboardSeed();
+  const wasteManagement = await ensureWasteManagementSeed();
+  const pages = await ensurePageContentSeed();
+  return { dashboard, wasteManagement, pages };
+}
+
+module.exports = { ensureDashboardSeed, ensurePageContentSeed, ensureWasteManagementSeed, ensureInitialSeeds };

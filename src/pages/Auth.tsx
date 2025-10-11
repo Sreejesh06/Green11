@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { getAvatarIcon } from "@/lib/avatar-icons";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -86,11 +88,21 @@ const Auth = () => {
     toast.info("Password reset isn't connected yet. Reach out to support to reset your password.");
   };
 
+  const heroAvatar = getAvatarIcon("PS");
+
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-secondary/10 px-4 py-12">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80')] opacity-5" />
       <Card className="relative z-10 w-full max-w-md border border-white/20 shadow-xl backdrop-blur">
-        <CardHeader className="space-y-2 text-center">
+        <CardHeader className="space-y-4 text-center">
+          {heroAvatar ? (
+            <Avatar className="mx-auto h-16 w-16 ring-4 ring-primary/20">
+              <AvatarImage src={heroAvatar.src} alt={heroAvatar.alt} />
+              <AvatarFallback className="bg-gradient-to-br from-primary/30 via-primary to-secondary/40 text-lg font-semibold text-primary-foreground">
+                PS
+              </AvatarFallback>
+            </Avatar>
+          ) : null}
           <CardTitle className="text-2xl font-semibold text-primary">Welcome</CardTitle>
           <CardDescription>Sign in or create an account</CardDescription>
         </CardHeader>

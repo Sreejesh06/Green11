@@ -1,4 +1,4 @@
-import { Home, Trophy, Gift, User, Settings, LogOut, Menu, X } from "lucide-react";
+import { Home, Trophy, Gift, User, Settings, LogOut, Menu, X, Recycle } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -10,6 +10,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { name: "Rewards", href: "/rewards", icon: Gift },
+  { name: "Waste Management", href: "/waste", icon: Recycle },
   { name: "Profile", href: "/profile", icon: User },
 ];
 
